@@ -167,7 +167,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
         if (!confirm) {
             return;
         }
-
+        listener.getLogger().println("自动完成升级.......");
         rancherClient.finishUpgradeService(environmentId, serviceInstance.get().getId());
         waitUntilServiceStateIs(serviceInstance.get().getId(), ACTIVE, listener);
     }
@@ -250,7 +250,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
         String[] fragments = environments.split(",");
         for (String fragement : fragments) {
             if (fragement.contains(":")) {
-                String[] env = fragement.split(":");
+                String[] env = fragement.split(":",2);
                 map.put(env[0], env[1]);
             }
         }

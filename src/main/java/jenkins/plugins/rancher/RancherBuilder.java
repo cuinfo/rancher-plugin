@@ -54,11 +54,13 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
     private int timeout = 50;
     private RancherClient rancherClient;
     private CredentialsUtil credentialsUtil;
+    private final String volumes;
+    private final String  volumeDriver;
 
     @DataBoundConstructor
     public RancherBuilder(
             String environmentId, String endpoint, String credentialId, String service,
-            String image, boolean confirm, String ports, String environments, int timeout) {
+            String image, boolean confirm, String ports, String environments, int timeout,String volumes,String volumeDriver) {
         this.environmentId = environmentId;
         this.endpoint = endpoint;
         this.credentialId = credentialId;
@@ -68,12 +70,14 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
         this.ports = ports;
         this.environments = environments;
         this.timeout = timeout;
+        this.volumes = volumes;
+        this.volumeDriver = volumeDriver;
     }
 
     protected static RancherBuilder newInstance(String environmentId, String endpoint, String credentialId, String service,
                                                 String image, boolean confirm, String ports, String environments, int timeout,
                                                 RancherClient rancherClient, CredentialsUtil credentialsUtil) {
-        RancherBuilder rancherBuilder = new RancherBuilder(environmentId, endpoint, credentialId, service, image, confirm, ports, environments, timeout);
+        RancherBuilder rancherBuilder = new RancherBuilder(environmentId, endpoint, credentialId, service, image, confirm, ports, environments, timeout,"",null);
         rancherBuilder.setCredentialsUtil(credentialsUtil);
         rancherBuilder.setRancherClient(rancherClient);
         return rancherBuilder;
@@ -95,6 +99,15 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
         if (!services.isPresent()) {
             throw new AbortException("Error happen when fetch stack<" + stack.getName() + "> services");
         }
+
+        Optional<StorageDrivers> drivers = rancherClient.storageDrivers(getEnvironmentId());
+        Optional<StorageDriver> driver = Optional.empty();
+        if(drivers.isPresent()){
+            driver = drivers.get().getData().stream().filter(d->d.getName().equals(volumeDriver)).findAny();
+        }
+
+
+
 
         Optional<Service> serviceInstance = services.get().getData().stream().filter(service1 -> service1.getName().equals(serviceField.getServiceName())).findAny();
         if (serviceInstance.isPresent()) {
@@ -154,6 +167,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
             launchConfig.setPorts(Arrays.asList(ports.split(",")));
             inServiceStrategy.setStartFirst(false);
         }
+        loadVolume(launchConfig);
 
         inServiceStrategy.setLaunchConfig(launchConfig);
         serviceUpgrade.setInServiceStrategy(inServiceStrategy);
@@ -182,6 +196,9 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
         if (!Strings.isNullOrEmpty(ports)) {
             launchConfig.setPorts(Arrays.asList(ports.split(",")));
         }
+
+        loadVolume(launchConfig);
+
         service.setLaunchConfig(launchConfig);
         Optional<Service> serviceInstance = rancherClient.createService(service, getEnvironmentId(), stack.getId());
 
@@ -191,6 +208,25 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
 
         waitUntilServiceStateIs(serviceInstance.get().getId(), ACTIVE, listener);
     }
+
+
+    protected void loadVolume(LaunchConfig launchConfig){
+        if(!Strings.isNullOrEmpty(volumes)){
+            launchConfig.setDataVolumes(Arrays.asList(volumes.split(",")));
+            if(Strings.isNullOrEmpty(volumeDriver)){
+
+                launchConfig.setVolumeDriver(volumeDriver);
+            }
+        }
+    }
+
+
+    protected void createVolume(){
+//        projects/1a54/stacks/1st77/volumes
+    }
+
+
+
 
     private void waitUntilServiceStateIs(String serviceId, String targetState, TaskListener listener) throws AbortException {
         int timeoutMs = 1000 * timeout;
@@ -309,6 +345,14 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
 
     public int getTimeout() {
         return timeout == 0 ? DEFAULT_TIMEOUT : timeout;
+    }
+
+    public String getVolumes() {
+        return volumes;
+    }
+
+    public String getVolumeDriver() {
+        return volumeDriver;
     }
 
     @Symbol("rancher")

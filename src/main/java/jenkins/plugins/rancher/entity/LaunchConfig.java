@@ -17,6 +17,7 @@ public class LaunchConfig {
 
     private List<String> dataVolumes;
     private List<String> dataVolumesFrom;
+    private String volumeDriver;
 
     private InstanceHealthCheck healthCheck;
     private String[] healthCmd;
@@ -183,5 +184,13 @@ public class LaunchConfig {
 
     public void setLogConfig(LogConfig logConfig) {
         this.logConfig = logConfig;
+    }
+
+    public String getVolumeDriver() {
+        return volumeDriver;
+    }
+
+    public void setVolumeDriver(String volumeDriver) {
+        this.volumeDriver = volumeDriver;
     }
 }

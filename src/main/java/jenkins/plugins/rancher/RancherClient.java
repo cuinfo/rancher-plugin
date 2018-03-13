@@ -60,4 +60,14 @@ public class RancherClient extends HttpClient {
         return Optional.ofNullable(post(String.format("/projects/%s/services/%s/?action=finishupgrade", environmentId, serviceId), Service.class));
     }
 
+    public Optional<Service> createVolume(String environmentId, String serviceId) throws IOException {
+        return Optional.ofNullable(post(String.format("/projects/%s/stacks/%s/volumes", environmentId, serviceId), Service.class));
+    }
+
+    public Optional<StorageDrivers> storageDrivers(String environmentId) throws IOException {
+        return Optional.ofNullable(post(String.format("/projects/%s/storagedrivers", environmentId), StorageDrivers.class));
+    }
+
+
+
 }

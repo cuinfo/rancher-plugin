@@ -60,8 +60,8 @@ public class RancherClient extends HttpClient {
         return Optional.ofNullable(post(String.format("/projects/%s/services/%s/?action=finishupgrade", environmentId, serviceId), Service.class));
     }
 
-    public Optional<Service> createVolume(String environmentId, String serviceId) throws IOException {
-        return Optional.ofNullable(post(String.format("/projects/%s/stacks/%s/volumes", environmentId, serviceId), Service.class));
+    public Optional<Volume> createVolume(String environmentId, String stackId,Volume volume) throws IOException {
+        return Optional.ofNullable(post(String.format("/projects/%s/stacks/%s/volumes", environmentId, stackId),volume, Volume.class));
     }
 
     public Optional<StorageDrivers> storageDrivers(String environmentId) throws IOException {
@@ -69,5 +69,7 @@ public class RancherClient extends HttpClient {
     }
 
 
-
+    public Optional<Volumes> volumes(String environmentId, String stackId) throws IOException {
+        return Optional.ofNullable(get(String.format("/projects/1a54/stacks/1st77/volumes",environmentId,stackId), Volumes.class));
+    }
 }

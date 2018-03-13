@@ -100,11 +100,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
             throw new AbortException("Error happen when fetch stack<" + stack.getName() + "> services");
         }
 
-        Optional<StorageDrivers> drivers = rancherClient.storageDrivers(getEnvironmentId());
-        Optional<StorageDriver> driver = Optional.empty();
-        if(drivers.isPresent()){
-            driver = drivers.get().getData().stream().filter(d->d.getName().equals(volumeDriver)).findAny();
-        }
+
 
 
 
@@ -167,7 +163,9 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
             launchConfig.setPorts(Arrays.asList(ports.split(",")));
             inServiceStrategy.setStartFirst(false);
         }
-        loadVolume(launchConfig);
+
+        //todo
+        //loadVolume(launchConfig);
 
         inServiceStrategy.setLaunchConfig(launchConfig);
         serviceUpgrade.setInServiceStrategy(inServiceStrategy);
@@ -197,7 +195,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
             launchConfig.setPorts(Arrays.asList(ports.split(",")));
         }
 
-        loadVolume(launchConfig);
+        loadVolume(launchConfig,stack.getId());
 
         service.setLaunchConfig(launchConfig);
         Optional<Service> serviceInstance = rancherClient.createService(service, getEnvironmentId(), stack.getId());
@@ -210,10 +208,40 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
     }
 
 
-    protected void loadVolume(LaunchConfig launchConfig){
+    protected void loadVolume(LaunchConfig launchConfig,String stackId) throws IOException {
+
+        Optional<StorageDrivers> drivers = rancherClient.storageDrivers(getEnvironmentId());
+
         if(!Strings.isNullOrEmpty(volumes)){
             launchConfig.setDataVolumes(Arrays.asList(volumes.split(",")));
             if(Strings.isNullOrEmpty(volumeDriver)){
+
+                Optional<StorageDriver> driver = Optional.empty();
+                if(drivers.isPresent()){
+                    driver = drivers.get().getData().stream().filter(d->d.getName().equals(volumeDriver)).findAny();
+                }
+                if(!driver.isPresent()){
+                    throw new AbortException("Not find volume dirver");
+                }
+                Optional<Volumes> volumes = rancherClient.volumes(getEnvironmentId(),stackId);
+
+                String driverId = driver.get().getId();
+
+                launchConfig.getDataVolumes().stream().map(v -> v.split(",")[0]).filter(v ->{
+                    Optional<Volume> volume = volumes.get().getData().stream().filter(s->s.getName().equals(v)).findAny();
+                    return !volume.isPresent();
+                }).forEach((String newV) ->{
+                    Volume volume = new Volume();
+                    volume.setStackId(stackId);
+                    volume.setStorageDriverId(driverId);
+                    try {
+                        rancherClient.createVolume(environmentId,stackId,volume);
+                    } catch (IOException e) {
+
+                    }
+                });
+
+
 
                 launchConfig.setVolumeDriver(volumeDriver);
             }

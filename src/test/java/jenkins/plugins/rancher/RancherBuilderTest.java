@@ -48,9 +48,12 @@ public class RancherBuilderTest {
         rancherClient = mock(RancherClient.class);
 
         rancherBuilder = RancherBuilder.newInstance(
-                "1a7", "http://localhost:8080/v2-beta", "credentialId", "stack/service", "nginx", true, "", "", 10,
+                "1a54", "http://110.185.101.106:9344/v2-beta", "credentialId", "sys/config-server2", "192.168.1.204/edu-cloud/sys-config-server", true, "", "", 10,
                 rancherClient, credentialsUtil);
     }
+
+
+
 
     @Test
     public void should_create_stack_and_service_when_both_of_them_not_present() throws IOException, InterruptedException {

@@ -65,11 +65,11 @@ public class RancherClient extends HttpClient {
     }
 
     public Optional<StorageDrivers> storageDrivers(String environmentId) throws IOException {
-        return Optional.ofNullable(post(String.format("/projects/%s/storagedrivers", environmentId), StorageDrivers.class));
+        return Optional.ofNullable(get(String.format("/projects/%s/storagedrivers", environmentId), StorageDrivers.class));
     }
 
 
     public Optional<Volumes> volumes(String environmentId, String stackId) throws IOException {
-        return Optional.ofNullable(get(String.format("/projects/1a54/stacks/1st77/volumes",environmentId,stackId), Volumes.class));
+        return Optional.ofNullable(get(String.format("/projects/%s/stacks/%s/volumes",environmentId,stackId), Volumes.class));
     }
 }

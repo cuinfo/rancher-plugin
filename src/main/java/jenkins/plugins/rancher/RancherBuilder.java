@@ -55,12 +55,12 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
     private RancherClient rancherClient;
     private CredentialsUtil credentialsUtil;
     private final String volumes;
-    private final String  volumeDriver;
+    private final String volumeDriver;
 
     @DataBoundConstructor
     public RancherBuilder(
             String environmentId, String endpoint, String credentialId, String service,
-            String image, boolean confirm, String ports, String environments, int timeout,String volumes,String volumeDriver) {
+            String image, boolean confirm, String ports, String environments, int timeout, String volumes, String volumeDriver) {
         this.environmentId = environmentId;
         this.endpoint = endpoint;
         this.credentialId = credentialId;
@@ -77,7 +77,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
     protected static RancherBuilder newInstance(String environmentId, String endpoint, String credentialId, String service,
                                                 String image, boolean confirm, String ports, String environments, int timeout,
                                                 RancherClient rancherClient, CredentialsUtil credentialsUtil) {
-        RancherBuilder rancherBuilder = new RancherBuilder(environmentId, endpoint, credentialId, service, image, confirm, ports, environments, timeout,"",null);
+        RancherBuilder rancherBuilder = new RancherBuilder(environmentId, endpoint, credentialId, service, image, confirm, ports, environments, timeout, "", null);
         rancherBuilder.setCredentialsUtil(credentialsUtil);
         rancherBuilder.setRancherClient(rancherClient);
         return rancherBuilder;
@@ -99,10 +99,6 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
         if (!services.isPresent()) {
             throw new AbortException("Error happen when fetch stack<" + stack.getName() + "> services");
         }
-
-
-
-
 
 
         Optional<Service> serviceInstance = services.get().getData().stream().filter(service1 -> service1.getName().equals(serviceField.getServiceName())).findAny();
@@ -195,7 +191,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
             launchConfig.setPorts(Arrays.asList(ports.split(",")));
         }
 
-        loadVolume(launchConfig,stack.getId());
+        loadVolume(launchConfig, stack.getId(), listener);
 
         service.setLaunchConfig(launchConfig);
         Optional<Service> serviceInstance = rancherClient.createService(service, getEnvironmentId(), stack.getId());
@@ -208,52 +204,57 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
     }
 
 
-    protected void loadVolume(LaunchConfig launchConfig,String stackId) throws IOException {
+    protected void loadVolume(LaunchConfig launchConfig, String stackId, TaskListener listener) throws IOException {
+
+        if (Strings.isNullOrEmpty(volumes)) {
+            listener.getLogger().println("Not need create volumes skip." );
+            return;
+        }
+        launchConfig.setDataVolumes(Arrays.asList(volumes.split(",")));
+
+        if(Strings.isNullOrEmpty(volumeDriver)){
+            listener.getLogger().println("No volumeDriver, Not need create volumes skip." );
+            return;
+        }
 
         Optional<StorageDrivers> drivers = rancherClient.storageDrivers(getEnvironmentId());
 
-        if(!Strings.isNullOrEmpty(volumes)){
-            launchConfig.setDataVolumes(Arrays.asList(volumes.split(",")));
-            if(Strings.isNullOrEmpty(volumeDriver)){
-
-                Optional<StorageDriver> driver = Optional.empty();
-                if(drivers.isPresent()){
-                    driver = drivers.get().getData().stream().filter(d->d.getName().equals(volumeDriver)).findAny();
-                }
-                if(!driver.isPresent()){
-                    throw new AbortException("Not find volume dirver");
-                }
-                Optional<Volumes> volumes = rancherClient.volumes(getEnvironmentId(),stackId);
-
-                String driverId = driver.get().getId();
-
-                launchConfig.getDataVolumes().stream().map(v -> v.split(",")[0]).filter(v ->{
-                    Optional<Volume> volume = volumes.get().getData().stream().filter(s->s.getName().equals(v)).findAny();
-                    return !volume.isPresent();
-                }).forEach((String newV) ->{
-                    Volume volume = new Volume();
-                    volume.setStackId(stackId);
-                    volume.setStorageDriverId(driverId);
-                    try {
-                        rancherClient.createVolume(environmentId,stackId,volume);
-                    } catch (IOException e) {
-
-                    }
-                });
-
-
-
-                launchConfig.setVolumeDriver(volumeDriver);
-            }
+        Optional<StorageDriver> driver = Optional.empty();
+        if (drivers.isPresent()) {
+            driver = drivers.get().getData().stream().filter(d -> d.getName().equals(volumeDriver)).findAny();
         }
+        if (!driver.isPresent()) {
+            throw new AbortException("Not find volume dirver");
+        }
+
+        launchConfig.setVolumeDriver(volumeDriver);
+
+        Optional<Volumes> volumes = rancherClient.volumes(getEnvironmentId(), stackId);
+
+        String driverId = driver.get().getId();
+
+        launchConfig.getDataVolumes().stream().map(v -> v.split(":")[0]).filter(v -> {
+            Optional<Volume> volume = volumes.get().getData().stream().filter(s -> s.getName().equals(v)).findAny();
+            listener.getLogger().println("check volume("+v+") exist?" + volume.isPresent());
+            return !volume.isPresent();
+        }).forEach((String newV) -> {
+            Volume volume = new Volume();
+            volume.setStackId(stackId);
+            volume.setStorageDriverId(driverId);
+            volume.setName(newV);
+            try {
+                listener.getLogger().println("create volume :" + newV);
+                rancherClient.createVolume(environmentId, stackId, volume);
+                listener.getLogger().println("create volume ("+newV+") success!");
+            } catch (IOException e) {
+
+            }
+        });
+
+
+
+
     }
-
-
-    protected void createVolume(){
-//        projects/1a54/stacks/1st77/volumes
-    }
-
-
 
 
     private void waitUntilServiceStateIs(String serviceId, String targetState, TaskListener listener) throws AbortException {
@@ -314,7 +315,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
         String[] fragments = environments.split(",");
         for (String fragement : fragments) {
             if (fragement.contains(":")) {
-                String[] env = fragement.split(":",2);
+                String[] env = fragement.split(":", 2);
                 map.put(env[0], env[1]);
             }
         }

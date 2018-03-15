@@ -9,6 +9,7 @@ public class Volume extends Resource {
     String stackId;
     String storageDriverId;
     String driver="";
+    String volumeTemplateId;
 
 
 
@@ -38,5 +39,13 @@ public class Volume extends Resource {
 
     public void setDriver(String driver) {
         this.driver = driver;
+    }
+
+    public String getVolumeTemplateId() {
+        return volumeTemplateId;
+    }
+
+    public void setVolumeTemplateId(String volumeTemplateId) {
+        this.volumeTemplateId = volumeTemplateId;
     }
 }

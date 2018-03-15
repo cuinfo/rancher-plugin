@@ -72,4 +72,14 @@ public class RancherClient extends HttpClient {
     public Optional<Volumes> volumes(String environmentId, String stackId) throws IOException {
         return Optional.ofNullable(get(String.format("/projects/%s/stacks/%s/volumes",environmentId,stackId), Volumes.class));
     }
+
+    public Optional<VolumeTemplates> volumeTemplates(String environmentId, String stackId) throws IOException {
+        return Optional.ofNullable(get(String.format("/projects/%s/stacks/%s/volumetemplates", environmentId, stackId), VolumeTemplates.class));
+    }
+
+    public Optional<VolumeTemplate> createVolumeTemplate(String environmentId, String stackId,VolumeTemplate volumeTemplate) throws IOException {
+        return Optional.ofNullable(post(String.format("/projects/%s/stacks/%s/volumetemplates", environmentId, stackId),volumeTemplate,VolumeTemplate.class));
+    }
+
+
 }
